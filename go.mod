@@ -40,4 +40,5 @@ require (
 	golang.org/x/text v0.3.2
 	google.golang.org/genproto v0.0.0-20191216205247-b31c10ee225f
 	google.golang.org/grpc v1.23.0
+	gopkg.in/yaml.v2 v2.2.4
 )

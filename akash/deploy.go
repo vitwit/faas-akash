@@ -1,62 +1,55 @@
 package akash
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"os/exec"
-
 	"github.com/fatih/color"
-	"github.com/openfaas/faas-provider/types"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"net/http"
+	"os/exec"
+	"time"
+
 	akashTypes "github.com/vitwit/faas-akash/types"
 )
 
-func Deploy(serviceMap akashTypes.ServiceMap) func(w http.ResponseWriter, r *http.Request) {
-	return Update(serviceMap)
+func Deploy(serviceMap akashTypes.ServiceMap, dir string) func(w http.ResponseWriter, r *http.Request) {
+	return Update(serviceMap, dir)
 }
 
-func Update(serviceMap akashTypes.ServiceMap) func(w http.ResponseWriter, r *http.Request) {
+func Update(serviceMap akashTypes.ServiceMap, dir string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		var body types.FunctionDeployment
+		var body akashTypes.FunctionDeployment
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}
 
+		prefix := fmt.Sprintf("akash-deployment-%s", body.Service)
+		f, e := ioutil.TempFile(dir, prefix)
+		if e != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		b, _ := yaml.Marshal(CreateDefaultDeploymentManifest(body.Image))
+
+		f.Write(b)
+		color.Red("request payload: %s", body.EnvVars)
+
 		defer func() {
 			_ = r.Body.Close()
-			color.Red("request payload: %s", body)
+			f.Close()
 		}()
 
-		// lookup for akash client bin file
-		// akash client MUST BE PRESENT in the $PATH
-		akashCmd, err := exec.LookPath("akash")
-		if err != nil {
-			w.WriteHeader(http.StatusPreconditionFailed)
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-			return
-		}
+		time.Sleep(time.Second * 5)
 
-		d, _ := os.Getwd()
-
-		dplFile := fmt.Sprintf("%s/x/riot.yaml", d)
-
-		out, err := exec.Command(akashCmd, "deployment", "create", "-m", "json", dplFile).Output()
+		akashOut, err := akashDeploy(f.Name())
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-			return
-		}
-
-		akashOut, err := marshalAkashStdout(fmt.Sprintf("%s", bytes.TrimSpace(out)))
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			w.Write([]byte(err.Error()))
 			return
 		}
 
@@ -68,21 +61,28 @@ func Update(serviceMap akashTypes.ServiceMap) func(w http.ResponseWriter, r *htt
 		}
 
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(map[string]string{"success": string(out)})
+		_ = json.NewEncoder(w).Encode(serviceMap)
 	}
 }
 
-func akashDeploy() (io.Writer, error) {
-	//check if the akash cli tool is installed
+func akashDeploy(manifestFile string) (*akashTypes.AkashStdout, error) {
+	// lookup for akash client bin file
+	// akash client MUST BE PRESENT in the $PATH
+	color.Green("creating akash deployment from file: %s", manifestFile)
 	akashBin, err := exec.LookPath("akash")
 	if err != nil {
 		return nil, fmt.Errorf("ERROR_AKASH_CLI_NOT_FOUND: %w", err)
 	}
 
-	cmdOut, err := exec.Command(akashBin, "deployment", "create", "-m", "json", "./x/riot.yaml").Output()
+	cmdOut, err := exec.Command(akashBin, "deployment", "create", "-m", "json", manifestFile).Output()
 	if err != nil {
 		return nil, fmt.Errorf("error creating deployment on akash network: %w", err)
 	}
 
-	return bytes.NewBuffer(cmdOut), nil
+	output, err := marshalAkashStdout(string(cmdOut))
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
 }
