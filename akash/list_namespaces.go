@@ -7,7 +7,7 @@ import (
 
 func ListNamespaces() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var list []string
+		list := []string{}
 		out, _ := json.Marshal(list)
 		_, _ = w.Write(out)
 	}
