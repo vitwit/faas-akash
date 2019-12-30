@@ -1,10 +1,13 @@
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
-PKG_NAME=pulsar
+PKG_NAME=./
 
 default: build
 
 fmtcheck:
 	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
+
+run: fmtcheck
+	@go build -o faas-akash && ./faas-akash
 
 build: fmtcheck
 	go build -o faas-akash

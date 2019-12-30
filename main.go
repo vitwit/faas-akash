@@ -1,104 +1,65 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
-	"net/url"
-	"os"
-	"strings"
-	"time"
-
-	"github.com/openfaas/faas-provider/proxy"
-	"github.com/vitwit/faas-akash/akash"
-	"github.com/vitwit/faas-akash/types"
-
-	"github.com/fatih/color"
 	bootstrap "github.com/openfaas/faas-provider"
-	bootstrapTypes "github.com/openfaas/faas-provider/types"
-	"github.com/sirupsen/logrus"
+	"github.com/openfaas/faas-provider/proxy"
+	"github.com/openfaas/faas-provider/types"
+	"github.com/vitwit/faas-akash/akash"
 	"github.com/vitwit/faas-akash/config"
+	akashTypes "github.com/vitwit/faas-akash/types"
+	"log"
 )
 
-func init() {
-	setLogger()
-}
-
 func main() {
-	// can take an optional config path
+	//a non-nil map is required, write ops to a nil map can panic
+	svcMap := akashTypes.ServiceMap{}
+
+	// an optional config path can be provided
 	cfg, err := config.Read()
 	if err != nil {
-		logrus.Printf("ERROR_READ_FAAS_AKASH_CONFIG: %s", err)
-		return
+		log.Fatal(err)
 	}
 
-	bootstrapConfig := bootstrapTypes.FaaSConfig{
+	Start(cfg, svcMap)
+}
+
+// Start faas-akash
+func Start(cfg *akashTypes.Config, serviceMap akashTypes.ServiceMap) {
+
+	faasConfig := types.FaaSConfig{
+		MaxIdleConns:        1000,
+		MaxIdleConnsPerHost: 1000,
 		ReadTimeout:         cfg.ReadTimeout,
 		WriteTimeout:        cfg.WriteTimeout,
-		MaxIdleConns:        1024,
-		MaxIdleConnsPerHost: 1024,
-		TCPPort:             &cfg.Port,
-		EnableHealth:        true,
-		EnableBasicAuth:     false,
 	}
 
-	bootstrapHandlers := &bootstrapTypes.FaaSHandlers{
-		FunctionProxy:        proxy.NewHandlerFunc(bootstrapConfig, invokeResolver{}),
+	resolver := akashTypes.InvokeResolver{
+		ServiceMap: serviceMap,
+	}
+
+	bootstrapHandlers := types.FaaSHandlers{
+		FunctionProxy:        proxy.NewHandlerFunc(faasConfig, resolver),
 		DeleteHandler:        akash.DeleteHandler(),
-		DeployHandler:        akash.DeployHandler(),
-		FunctionReader:       akash.Reader(functions),
-		ReplicaReader:        akash.ReplicaReader(functions),
-		UpdateHandler:        akash.UpdateHandler(),
+		DeployHandler:        akash.Deploy(serviceMap),
+		FunctionReader:       akash.ReadHandler(serviceMap),
+		UpdateHandler:        akash.Update(serviceMap),
+		ReplicaReader:        akash.ReplicaReader(serviceMap),
 		ListNamespaceHandler: akash.ListNamespaces(),
-		ReplicaUpdater:       func(w http.ResponseWriter, r *http.Request) {},
-		HealthHandler:        func(w http.ResponseWriter, r *http.Request) {},
-		InfoHandler:          func(w http.ResponseWriter, r *http.Request) {},
+		//ReplicaUpdater:       func(w http.ResponseWriter, r *http.Request) {},
+		//HealthHandler:        func(w http.ResponseWriter, r *http.Request) {},
+		//InfoHandler:          func(w http.ResponseWriter, r *http.Request) {},
 	}
 
-	color.Green("started faas-akash provider on port: %d", cfg.Port)
-	bootstrap.Serve(bootstrapHandlers, &bootstrapConfig)
-}
-
-func setLogger() {
-	logFormat := os.Getenv("LOG_FORMAT")
-	logLevel := os.Getenv("LOG_LEVEL")
-	if strings.EqualFold(logFormat, "json") {
-		logrus.SetFormatter(&logrus.JSONFormatter{
-			FieldMap: logrus.FieldMap{
-				logrus.FieldKeyMsg:  "message",
-				logrus.FieldKeyTime: "@timestamp",
-			},
-			TimestampFormat: time.RFC3339,
-		})
-	} else {
-		logrus.SetFormatter(&logrus.TextFormatter{
-			FullTimestamp: true,
-		})
+	port := 8081
+	bootstrapConfig := types.FaaSConfig{
+		ReadTimeout:     cfg.ReadTimeout,
+		WriteTimeout:    cfg.WriteTimeout,
+		TCPPort:         &port,
+		EnableBasicAuth: false,
+		EnableHealth:    true,
 	}
 
-	if level, err := logrus.ParseLevel(logLevel); err == nil {
-		logrus.SetLevel(level)
-	}
-}
+	log.Printf("TCP port: %d\n", cfg.Port)
 
-type invokeResolver struct{}
-
-var functions map[string]*types.AkashDeployments
-
-func (invokeResolver) Resolve(functionName string) (url.URL, error) {
-	ad, ok := functions[functionName]
-	if !ok {
-		return url.URL{}, fmt.Errorf("not found")
-	}
-
-	//@TODO need to implement a lookup mechanism for function ip, url from akash network
-	const watchdogPort = 8080
-
-	urlStr := fmt.Sprintf("http://%s:%d", ad.IP, watchdogPort)
-
-	urlRes, err := url.Parse(urlStr)
-	if err != nil {
-		return url.URL{}, err
-	}
-
-	return *urlRes, nil
+	bootstrap.Serve(&bootstrapHandlers, &bootstrapConfig)
 }

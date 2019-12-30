@@ -12,14 +12,14 @@ Requirements
 
 - [Go](https://golang.org/doc/install) 1.13+ (to build the provider plugin)
 - [faas-cli](https://github.com/openfaas/faas-cli/releases) 
-- [akash-cli](https://github.com/ovrclk/akash/releases)
+- [akash-cli](https://github.com/ovrclk/akash/releases) (make sure to put akash-cli in your $PATH or /usr/local/bin)
 
 Installation
 ------------
 
 * Clone this repository and cd into the directory
 * Run `make build`, it will generate a file named `faas-akash`  
-* run `./faas-akash` and enjoy OpenFaas :fire: Akash Network 
+* run `./faas-akash` and enjoy OpenFaas :handshaking: Akash Network 
 
 Provider Configuration
 ------------

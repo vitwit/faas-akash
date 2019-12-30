@@ -15,5 +15,7 @@
 # vendor/
 
 config.yaml
-x/
+#x/
 .idea
+template
+build

@@ -2,8 +2,6 @@ package types
 
 import (
 	"fmt"
-	"net"
-	"net/url"
 	"strings"
 	"time"
 
@@ -19,10 +17,27 @@ type (
 	}
 	AkashDeployments struct {
 		Name    string
-		URL     url.URL
+		URL     string
 		LeaseID string
-		IP      net.IP
+		IP      string
 	}
+	ServiceMap map[string]*AkashDeployments
+
+	InvokeResolver struct {
+		ServiceMap ServiceMap
+	}
+	AkashStdout struct {
+		Leases []struct {
+			LeaseID  string `json:"lease_id"`
+			Services []struct {
+				Available string `json:"available"`
+				Hosts     string `json:"hosts"`
+				Name      string `json:"name"`
+				Total     string `json:"total"`
+			} `json:"services"`
+		} `json:"leases"`
+	}
+
 	FaasAkashDeployments map[string]*AkashDeployments
 
 	FaasError map[string]string

@@ -2,10 +2,10 @@ package config
 
 import (
 	"fmt"
-	"os/user"
-
 	"github.com/spf13/viper"
 	"github.com/vitwit/faas-akash/types"
+	"os/user"
+	"time"
 )
 
 // Read the config from a yaml file <defaults to $HOME/.akash/config.yaml>
@@ -16,6 +16,7 @@ func Read(paths ...string) (*types.Config, error) {
 	}
 
 	// default path for config
+	viper.AddConfigPath("./")
 	viper.AddConfigPath(u.HomeDir + "/.akash")
 	// add any custom paths for the config
 	for _, p := range paths {
@@ -30,6 +31,9 @@ func Read(paths ...string) (*types.Config, error) {
 	if err = viper.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("error unmarshaling faas-akash config: %w", err)
 	}
+
+	cfg.WriteTimeout = time.Second * cfg.WriteTimeout
+	cfg.ReadTimeout = time.Second * cfg.ReadTimeout
 
 	if err = cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("error validating faas-akash config: %w", err)
