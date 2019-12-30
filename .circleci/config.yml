@@ -39,9 +39,6 @@ jobs:
           keys:
             - go-mod-v2-{{ checksum "go.sum" }}
       - run:
-          name: Cache go modules
-          command: make go-mod-cache
-      - run:
           name: Build
           command: make build
       - run:
