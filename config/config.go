@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Read the config from a yaml file <defaults to $HOME/.akash/config.yaml>
+// Read the config from a yaml file <defaults to $HOME/.faas-akash/config.yaml>
 func Read(paths ...string) (*types.Config, error) {
 	u, err := user.Current()
 	if err != nil {
@@ -17,7 +17,7 @@ func Read(paths ...string) (*types.Config, error) {
 
 	// default path for config
 	viper.AddConfigPath("./")
-	viper.AddConfigPath(u.HomeDir + "/.akash")
+	viper.AddConfigPath(u.HomeDir + "/.faas-akash")
 	// add any custom paths for the config
 	for _, p := range paths {
 		viper.AddConfigPath(p)

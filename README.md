@@ -30,7 +30,7 @@ Installation
 Provider Configuration
 ------------
 
-* by default, faas-akash provider assumes a `config.yaml` to be present in $HOME/.akash/
+* by default, faas-akash provider assumes a `config.yaml` to be present in $HOME/.faas-akash/
 * few fields can be set using this config file or environmental variables
 
 | Property                      | Description                                                                                                           | Required    |
