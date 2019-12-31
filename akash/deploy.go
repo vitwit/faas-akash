@@ -4,62 +4,63 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/fatih/color"
+	akashTypes "github.com/vitwit/faas-akash/types"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"net/http"
 	"os/exec"
-	"time"
-
-	akashTypes "github.com/vitwit/faas-akash/types"
 )
 
+// @TODO Use update code as deploy code
 func Deploy(serviceMap akashTypes.ServiceMap, dir string) func(w http.ResponseWriter, r *http.Request) {
 	return Update(serviceMap, dir)
 }
 
+// @TODO Implement update
 func Update(serviceMap akashTypes.ServiceMap, dir string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		var body akashTypes.FunctionDeployment
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		prefix := fmt.Sprintf("akash-deployment-%s", body.Service)
+		//@TODO removing this file in defer returns an error from akash client
 		f, e := ioutil.TempFile(dir, prefix)
 		if e != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
 
+		// marshal the go-struct into yaml-compatible structure
 		b, _ := yaml.Marshal(CreateDefaultDeploymentManifest(body.Image))
 
-		f.Write(b)
-		color.Red("request payload: %s", body.EnvVars)
+		// if b is empty, file will be empty too
+		// @TODO add checks for proper data flush to file
+		_, _ = f.Write(b)
 
 		defer func() {
 			_ = r.Body.Close()
-			f.Close()
+			_ = f.Close()
 		}()
-
-		time.Sleep(time.Second * 5)
 
 		akashOut, err := akashDeploy(f.Name())
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		serviceMap[body.Service] = &akashTypes.AkashDeployments{
-			Name:    body.Service,
-			URL:     akashOut.Leases[0].Services[0].Hosts,
-			LeaseID: akashOut.Leases[0].LeaseID,
-			IP:      akashOut.Leases[0].Services[1].Hosts,
+		for _, out := range akashOut.Leases {
+			serviceMap[body.Service] = &akashTypes.AkashDeployments{
+				// out.Services[0].Hosts is the url for the akash service
+				Name:    body.Service,
+				URL:     out.Services[0].Hosts,
+				LeaseID: out.LeaseID,
+				IP:      out.Services[1].Hosts,
+			}
 		}
-
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(serviceMap)
 	}

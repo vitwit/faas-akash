@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/fatih/color"
 	bootstrap "github.com/openfaas/faas-provider"
-	"github.com/openfaas/faas-provider/proxy"
 	"github.com/openfaas/faas-provider/types"
 	"github.com/vitwit/faas-akash/akash"
 	"github.com/vitwit/faas-akash/config"
@@ -50,19 +49,20 @@ func main() {
 // Start faas-akash
 func Start(cfg *akashTypes.Config, serviceMap akashTypes.ServiceMap, dir string) {
 
-	faasConfig := types.FaaSConfig{
-		MaxIdleConns:        1000,
-		MaxIdleConnsPerHost: 1000,
-		ReadTimeout:         cfg.ReadTimeout,
-		WriteTimeout:        cfg.WriteTimeout,
-	}
+	//faasConfig := types.FaaSConfig{
+	//	MaxIdleConns:        1000,
+	//	MaxIdleConnsPerHost: 1000,
+	//	ReadTimeout:         cfg.ReadTimeout,
+	//	WriteTimeout:        cfg.WriteTimeout,
+	//}
 
 	resolver := akashTypes.InvokeResolver{
 		ServiceMap: serviceMap,
 	}
 
 	bootstrapHandlers := types.FaaSHandlers{
-		FunctionProxy:        proxy.NewHandlerFunc(faasConfig, resolver),
+		//FunctionProxy:        proxy.NewHandlerFunc(faasConfig, resolver),
+		FunctionProxy:        akash.Proxy(&resolver),
 		DeleteHandler:        akash.DeleteHandler(),
 		DeployHandler:        akash.Deploy(serviceMap, dir),
 		FunctionReader:       akash.ReadHandler(serviceMap),
