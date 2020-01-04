@@ -3,12 +3,14 @@ package akash
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/fatih/color"
-	akashTypes "github.com/vitwit/faas-akash/types"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"net/http"
 	"os/exec"
+
+	"github.com/fatih/color"
+	"github.com/openfaas/faas-provider/types"
+	akashTypes "github.com/vitwit/faas-akash/types"
+	"gopkg.in/yaml.v2"
 )
 
 // @TODO Use update code as deploy code
@@ -20,7 +22,7 @@ func Deploy(serviceMap akashTypes.ServiceMap, dir string) func(w http.ResponseWr
 func Update(serviceMap akashTypes.ServiceMap, dir string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		var body akashTypes.FunctionDeployment
+		var body types.FunctionDeployment
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

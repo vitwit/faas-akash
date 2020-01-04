@@ -6,6 +6,7 @@ import (
 	"net/url"
 )
 
+// Resolver is responsible for locating the function, when we access the faas-url
 func (ir InvokeResolver) Resolve(functionName string) (url.URL, error) {
 	fmt.Println("Resolve: ", functionName)
 	service, ok := ir.ServiceMap[functionName]

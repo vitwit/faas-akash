@@ -3,8 +3,9 @@ package akash
 import (
 	"encoding/json"
 	"fmt"
-	akashTypes "github.com/vitwit/faas-akash/types"
 	"strings"
+
+	akashTypes "github.com/vitwit/faas-akash/types"
 )
 
 func marshalAkashStdout(stdout string) (*akashTypes.AkashStdout, error) {
@@ -18,8 +19,8 @@ func marshalAkashStdout(stdout string) (*akashTypes.AkashStdout, error) {
 	var leaseOut akashTypes.AkashStdout
 	// split on }{ would remove opening json curly-brace, so we're adding it here manually
 	// out[1] is assumed to be the leases object
-	validJson := []byte("{" + out[1])
-	if err := json.Unmarshal(validJson, &leaseOut); err != nil {
+	validJSON := []byte("{" + out[1])
+	if err := json.Unmarshal(validJSON, &leaseOut); err != nil {
 		return nil, err
 	}
 

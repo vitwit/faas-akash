@@ -1,17 +1,18 @@
 package main
 
 import (
+	"io/ioutil"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/fatih/color"
 	bootstrap "github.com/openfaas/faas-provider"
 	"github.com/openfaas/faas-provider/types"
 	"github.com/vitwit/faas-akash/akash"
 	"github.com/vitwit/faas-akash/config"
 	akashTypes "github.com/vitwit/faas-akash/types"
-	"io/ioutil"
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 func main() {
@@ -35,12 +36,12 @@ func main() {
 
 	go func() {
 		<-done
-		os.RemoveAll(dir)
+		_ = os.RemoveAll(dir)
 		os.Exit(1)
 	}()
 
 	defer func() {
-		os.RemoveAll(dir)
+		_ = os.RemoveAll(dir)
 	}()
 
 	Start(cfg, svcMap, dir)
@@ -74,11 +75,10 @@ func Start(cfg *akashTypes.Config, serviceMap akashTypes.ServiceMap, dir string)
 		//InfoHandler:          func(w http.ResponseWriter, r *http.Request) {},
 	}
 
-	port := 8081
 	bootstrapConfig := types.FaaSConfig{
 		ReadTimeout:     cfg.ReadTimeout,
 		WriteTimeout:    cfg.WriteTimeout,
-		TCPPort:         &port,
+		TCPPort:         &cfg.Port,
 		EnableBasicAuth: false,
 		EnableHealth:    true,
 	}

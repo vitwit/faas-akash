@@ -21,7 +21,7 @@ fmt:
 
 lint:
 	@echo "==> Checking source code against linters..."
-	@golangci-lint run -c golangci.yaml ./...
+	@golangci-lint run -c golangci.yaml .
 
 tools:
 	GO111MODULE=on go install github.com/golangci/golangci-lint/cmd/golangci-lint
