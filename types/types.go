@@ -98,7 +98,6 @@ type (
 	}
 
 	FunctionDeployment struct {
-		Price string
 		// Service corresponds to a Service
 		Service string `json:"service"`
 

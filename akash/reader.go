@@ -2,10 +2,11 @@ package akash
 
 import (
 	"encoding/json"
+	"net/http"
+
 	"github.com/gorilla/mux"
 	"github.com/openfaas/faas-provider/types"
 	akashTypes "github.com/vitwit/faas-akash/types"
-	"net/http"
 )
 
 func ReplicaReader(serviceMap akashTypes.ServiceMap) func(w http.ResponseWriter, r *http.Request) {

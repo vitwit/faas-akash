@@ -1,51 +1,60 @@
 package akash
 
-//func lookupHostName(functionName string) (string, error) {
-//	return fmt.Sprintf("%s.openfaas.local", functionName), nil
-//}
-//
-//type response struct {
-//	Function     string
-//	ResponseBody string
-//	HostName     string
-//}
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"strings"
 
-//func Proxy(functions map[string]*types.FunctionStatus) http.HandlerFunc {
-//	return func(w http.ResponseWriter, r *http.Request) {
-//		vars := mux.Vars(r)
-//		name := vars["name"]
-//		log.Info("proxy request: " + name)
-//
-//		v, okay := functions[name]
-//		if !okay {
-//			w.WriteHeader(http.StatusNotFound)
-//			w.Write([]byte("{ \"status\" : \"Not found\"}"))
-//			log.Errorf("%s not found", name)
-//			return
-//		}
-//
-//		v.InvocationCount = v.InvocationCount + 1
-//
-//		defer r.Body.Close()
-//		body, _ := ioutil.ReadAll(r.Body)
-//
-//		hostName, _ := os.Hostname()
-//		d := &response{
-//			Function:     name,
-//			ResponseBody: string(body),
-//			HostName:     hostName,
-//		}
-//
-//		responseBody, err := json.Marshal(d)
-//		if err != nil {
-//			w.WriteHeader(http.StatusInternalServerError)
-//			w.Write([]byte(err.Error()))
-//			log.Errorf("error invoking %s. %v", name, err)
-//			return
-//		}
-//
-//		w.Write(responseBody)
-//
-//		log.Infof("proxy request: %s completed.", name)
-//	}
-//}
+	"github.com/gorilla/mux"
+	akashTypes "github.com/vitwit/faas-akash/types"
+)
+
+func reverseProxy(proxyURL *url.URL, fnName string, w http.ResponseWriter, r *http.Request) {
+
+	proxy := httputil.NewSingleHostReverseProxy(proxyURL)
+
+	r.URL.Host = proxyURL.Host
+	r.URL.Scheme = proxyURL.Scheme
+	r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
+	r.Host = proxyURL.Host
+	prefixToTrim := fmt.Sprintf("/function/%s", fnName)
+
+	// trim the prefix, you'll be left with the suffix
+	suffix := strings.TrimPrefix(r.URL.Path, prefixToTrim)
+	r.URL.Path = suffix
+	//r.URL.ForceQuery = proxyURL.ForceQuery
+	//r.URL.RawQuery = proxyURL.RawQuery
+
+	log.Printf("proxy request to url: %s", r.URL.String())
+	log.Printf("proxy request to url: %s", r.URL.Path)
+
+	proxy.ServeHTTP(w, r)
+}
+
+func Proxy(resolver *akashTypes.InvokeResolver) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if resolver == nil {
+			http.Error(w, errNilResolver, http.StatusPreconditionFailed)
+			return
+		}
+
+		pathVars := mux.Vars(r)
+		fnName := pathVars["name"]
+		if fnName == "" {
+			http.Error(w, errMissingFunctionName, http.StatusBadRequest)
+			return
+		}
+
+		fnURL, err := resolver.Resolve(fnName)
+		if err != nil {
+			msg := fmt.Sprintf(errFunctionNotFound, strings.ToUpper(fnName))
+			http.Error(w, msg, http.StatusNotFound)
+			return
+		}
+
+		reverseProxy(&fnURL, fnName, w, r)
+	}
+}
