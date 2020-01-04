@@ -27,4 +27,3 @@ tools:
 	GO111MODULE=on go install github.com/golangci/golangci-lint/cmd/golangci-lint
 
 .PHONY: build test fmt fmtcheck lint tools
-
