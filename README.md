@@ -12,6 +12,7 @@
 
 * [Requirements](#requirements)
 * [Installation](#installation)
+* [Getting Started](#getting-started)
 
 Requirements
 ------------
@@ -26,6 +27,20 @@ Installation
 * Clone this repository and cd into the directory
 * Run `make build`, it will generate a file named `faas-akash`  
 * run `./faas-akash` and enjoy OpenFaas :handshaking: Akash Network 
+
+Getting Started
+---------------
+A Makefile has been provided to make it easier to work with faas-akash provider.
+
+* Clone this repo and cd into it
+* run `make build`, this will download all the dependencies and build the project into a binary named `faas-akash`.
+* an example `config.yaml.example` file has been provided, rename this file to config.yaml and set the correct values for 
+Port number, Read and Write timeouts
+* run `./faas-akash` and faas-akash should be up and running
+* open another terminal and export the faas-akash url as
+`export OPENFAAS_URL=127.0.0.1:<port-from-config.yaml>`
+* now faas-cli should be able to interact with faas-akash provider
+
 
 Provider Configuration
 ------------
@@ -46,5 +61,10 @@ port: 8090
 readTimeout: 180
 writeTimeout: 180
 ```
+
+Contribution Guidelines
+-----------------------
+ 
+To contribute, please read the contribution guidelines: [Contributing to faas-akash Provider](.github/CONTRIBUTING.md)
 
 [install-go]: https://golang.org/doc/install#install
